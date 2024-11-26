@@ -1,3 +1,3 @@
 # personalaccounts
 new version that is public of pepoles pictures in their personal issues that i will upload
-{123}(filename)
+{text}(123.md)
