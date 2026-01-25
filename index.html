@@ -5,107 +5,89 @@
     <title>רשת המעשים הטובים</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .user-icon { position: absolute; cursor: pointer; transition: all 0.4s ease; }
-        .user-icon:hover { transform: scale(1.1); z-index: 10; }
-        #modal { display: none; backdrop-filter: blur(10px); }
+        .user-icon { position: absolute; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .user-icon:hover { transform: scale(1.1) rotate(5deg); z-index: 10; }
+        #modal { display: none; backdrop-filter: blur(12px); }
+        .img-card { width: 100%; height: auto; max-height: 400px; object-fit: contain; border-radius: 1rem; background: #f8fafc; }
     </style>
 </head>
-<body class="bg-slate-100 min-h-screen font-sans overflow-hidden">
+<body class="bg-slate-50 min-h-screen font-sans">
 
-    <div class="pt-10 text-center">
-        <h1 class="text-3xl font-bold text-slate-800">הפעולות המיטיבות של הקהילה</h1>
-        <div id="status-msg" class="text-blue-500 mt-2 text-sm italic font-medium">מתחבר לגיטהאב של shantupai...</div>
+    <div class="pt-12 text-center">
+        <h1 class="text-4xl font-black text-indigo-900 drop-shadow-sm">רשת המעשים הטובים</h1>
+        <p id="status-msg" class="text-indigo-500 mt-2 text-lg italic">טוען את הטוב שבקהילה...</p>
     </div>
     
-    <div id="container" class="relative w-full h-[80vh]"></div>
+    <div id="container" class="relative w-full h-[75vh]"></div>
 
-    <div id="modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onclick="this.style.display='none'">
-        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl" onclick="event.stopPropagation()">
-            <div class="p-5 border-b flex justify-between items-center">
-                <h2 id="modalTitle" class="text-xl font-bold"></h2>
-                <button onclick="document.getElementById('modal').style.display='none'" class="text-gray-400 text-2xl">✕</button>
+    <div id="modal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4" onclick="this.style.display='none'">
+        <div class="bg-white rounded-[2rem] shadow-2xl max-w-3xl w-full max-h-[90vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
+            <div class="p-6 border-b flex justify-between items-center bg-white">
+                <h2 id="modalTitle" class="text-2xl font-bold text-indigo-800"></h2>
+                <button onclick="document.getElementById('modal').style.display='none'" class="text-slate-400 hover:text-slate-600 text-3xl">✕</button>
             </div>
-            <div id="gallery" class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto min-h-[200px]"></div>
+            <div id="gallery" class="p-6 grid grid-cols-1 gap-6 overflow-y-auto bg-slate-50">
+                </div>
         </div>
     </div>
 
     <script>
-        // הפרטים המעודכנים לפי הלינק שלך:
         const USER = 'shantupai'; 
         const REPO = 'personalaccounts';
 
-        const container = document.getElementById('container');
-        const statusMsg = document.getElementById('status-msg');
-
         async function loadApp() {
             try {
-                // הוספת מזהה ייחודי כדי למנוע מהדפדפן להציג מידע ישן (Cache)
-                const url = `https://api.github.com/repos/${USER}/${REPO}/issues?state=all&t=${new Date().getTime()}`;
-                const res = await fetch(url);
-                
-                if (!res.ok) throw new Error("לא מצליח למשוך נתונים. וודא שהריפו ציבורי.");
-
+                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/issues?state=all&t=${Date.now()}`);
                 const issues = await res.json();
                 
-                if (issues.length === 0) {
-                    statusMsg.innerText = "הקשר נוצר! אבל אין עדיין Issues בריפו.";
-                    return;
-                }
-
-                statusMsg.innerText = `נמצאו ${issues.length} חשבונות. לחצו על עיגול!`;
+                if (issues.length > 0) document.getElementById('status-msg').innerText = "לחצו על עיגול לצפייה במעשים הטובים";
 
                 issues.forEach(issue => {
                     const bubble = document.createElement('div');
-                    bubble.className = 'user-icon w-20 h-20 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg border-4 border-white';
-                    bubble.innerText = issue.title.substring(0, 2);
-                    bubble.style.left = Math.floor(Math.random() * 70 + 15) + '%';
-                    bubble.style.top = Math.floor(Math.random() * 60 + 15) + '%';
+                    bubble.className = 'user-icon w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-xl border-4 border-white';
+                    bubble.innerText = issue.title.charAt(0).toUpperCase();
+                    bubble.style.left = Math.random() * 70 + 15 + '%';
+                    bubble.style.top = Math.random() * 60 + 15 + '%';
                     bubble.onclick = () => showGallery(issue);
-                    container.appendChild(bubble);
+                    document.getElementById('container').appendChild(bubble);
                 });
-
-            } catch (err) {
-                statusMsg.innerHTML = `<span class="text-red-500 font-bold underline">שגיאה: ${err.message}</span>`;
-            }
+            } catch (e) { document.getElementById('status-msg').innerText = "שגיאה בחיבור לנתונים"; }
         }
 
         async function showGallery(issue) {
             const modal = document.getElementById('modal');
             const gallery = document.getElementById('gallery');
             document.getElementById('modalTitle').innerText = `הפעולות של ${issue.title}`;
-            gallery.innerHTML = '<p class="text-center col-span-full">טוען תמונות...</p>';
+            gallery.innerHTML = '<p class="text-center py-10 text-indigo-400 animate-bounce">פותח את האלבום...</p>';
             modal.style.display = 'flex';
 
             try {
                 const res = await fetch(issue.comments_url);
                 const comments = await res.json();
                 gallery.innerHTML = '';
-                
-                let count = 0;
-                comments.forEach(comment => {
-                    // מחפש לינקים של תמונות (כולל אלו שגיטהאב יוצר בהעלאה ישירה)
-                    const regex = /(https?:\/\/[^\s\)]+(?:\.jpg|\.jpeg|\.png|\.gif|\.webp|user-images|assets\.github\.com)[^\s\)]*)/gi;
-                    const images = comment.body.match(regex);
+                let found = 0;
+
+                comments.forEach(c => {
+                    // הביטוי הרגולרי החדש שתופס את הפורמט ששלחת: user-attachments/assets
+                    const regex = /(https?:\/\/[^\s\)]+(?:user-attachments|assets|user-images)[^\s\)]+)/gi;
+                    const matches = c.body.match(regex);
                     
-                    if (images) {
-                        images.forEach(imgUrl => {
-                            count++;
+                    if (matches) {
+                        matches.forEach(url => {
+                            found++;
+                            const cleanUrl = url.replace(/[()\[\]]/g, '').split('?')[0]; // מנקה שאריות מהלינק
                             const img = document.createElement('img');
-                            // ניקוי תווים מיותרים מהלינק
-                            img.src = imgUrl.replace(/[()]/g, ''); 
-                            img.className = 'w-full h-48 object-cover rounded-lg shadow-md border border-gray-100';
+                            img.src = cleanUrl;
+                            img.className = 'img-card shadow-md border-4 border-white';
+                            img.onerror = () => img.style.display = 'none'; // מסתיר לינקים שבורים
                             gallery.appendChild(img);
                         });
                     }
                 });
 
-                if (count === 0) gallery.innerHTML = '<p class="text-center col-span-full text-gray-500 italic py-10">לא נמצאו תמונות בתגובות של חשבון זה.</p>';
-                
-            } catch (e) {
-                gallery.innerHTML = 'שגיאה בטעינת התמונות.';
-            }
+                if (found === 0) gallery.innerHTML = '<div class="text-center py-20 text-slate-500 italic">לא נמצאו תמונות בתגובות.</div>';
+            } catch (e) { gallery.innerHTML = 'תקלה בטעינה.'; }
         }
-
         loadApp();
     </script>
 </body>
