@@ -13,8 +13,8 @@
 <body class="bg-slate-100 min-h-screen font-sans overflow-hidden">
 
     <div class="pt-10 text-center">
-        <h1 class="text-3xl font-bold text-slate-800">הפעולות המיטיבות שלנו</h1>
-        <div id="status-msg" class="text-blue-500 mt-2 text-sm italic font-medium">טוען נתונים מגיטהאב...</div>
+        <h1 class="text-3xl font-bold text-slate-800">הפעולות המיטיבות של הקהילה</h1>
+        <div id="status-msg" class="text-blue-500 mt-2 text-sm italic font-medium">מתחבר לגיטהאב של shantupai...</div>
     </div>
     
     <div id="container" class="relative w-full h-[80vh]"></div>
@@ -25,34 +25,30 @@
                 <h2 id="modalTitle" class="text-xl font-bold"></h2>
                 <button onclick="document.getElementById('modal').style.display='none'" class="text-gray-400 text-2xl">✕</button>
             </div>
-            <div id="gallery" class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto min-h-[200px]">
-                </div>
+            <div id="gallery" class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto min-h-[200px]"></div>
         </div>
     </div>
 
     <script>
-        // --- חובה לעדכן כאן ---
+        // הפרטים המעודכנים לפי הלינק שלך:
         const USER = 'shantupai'; 
-        const REPO = 'personalaccounts
-';
-        // ----------------------
+        const REPO = 'personalaccounts';
 
         const container = document.getElementById('container');
         const statusMsg = document.getElementById('status-msg');
 
         async function loadApp() {
             try {
-                const url = `https://api.github.com/repos/${USER}/${REPO}/issues?state=all`;
+                // הוספת מזהה ייחודי כדי למנוע מהדפדפן להציג מידע ישן (Cache)
+                const url = `https://api.github.com/repos/${USER}/${REPO}/issues?state=all&t=${new Date().getTime()}`;
                 const res = await fetch(url);
                 
-                if (!res.ok) {
-                    throw new Error(`שגיאה מהשרת: ${res.status}. וודא ששם המשתמש והריפו נכונים.`);
-                }
+                if (!res.ok) throw new Error("לא מצליח למשוך נתונים. וודא שהריפו ציבורי.");
 
                 const issues = await res.json();
                 
                 if (issues.length === 0) {
-                    statusMsg.innerText = "לא נמצאו Issues (חשבונות) בריפו.";
+                    statusMsg.innerText = "הקשר נוצר! אבל אין עדיין Issues בריפו.";
                     return;
                 }
 
@@ -62,18 +58,14 @@
                     const bubble = document.createElement('div');
                     bubble.className = 'user-icon w-20 h-20 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg border-4 border-white';
                     bubble.innerText = issue.title.substring(0, 2);
-                    
-                    // מיקום רנדומלי
-                    bubble.style.left = Math.floor(Math.random() * 75 + 5) + '%';
-                    bubble.style.top = Math.floor(Math.random() * 65 + 5) + '%';
-                    
+                    bubble.style.left = Math.floor(Math.random() * 70 + 15) + '%';
+                    bubble.style.top = Math.floor(Math.random() * 60 + 15) + '%';
                     bubble.onclick = () => showGallery(issue);
                     container.appendChild(bubble);
                 });
 
             } catch (err) {
-                statusMsg.innerHTML = `<span class="text-red-500 font-bold">שגיאה: ${err.message}</span>`;
-                console.error(err);
+                statusMsg.innerHTML = `<span class="text-red-500 font-bold underline">שגיאה: ${err.message}</span>`;
             }
         }
 
@@ -81,7 +73,7 @@
             const modal = document.getElementById('modal');
             const gallery = document.getElementById('gallery');
             document.getElementById('modalTitle').innerText = `הפעולות של ${issue.title}`;
-            gallery.innerHTML = '<p class="text-center col-span-full">מחפש תמונות...</p>';
+            gallery.innerHTML = '<p class="text-center col-span-full">טוען תמונות...</p>';
             modal.style.display = 'flex';
 
             try {
@@ -91,25 +83,26 @@
                 
                 let count = 0;
                 comments.forEach(comment => {
-                    // חיפוש לינקים לתמונות בתוך הטקסט
-                    const regex = /(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|gif|webp))/gi;
+                    // מחפש לינקים של תמונות (כולל אלו שגיטהאב יוצר בהעלאה ישירה)
+                    const regex = /(https?:\/\/[^\s\)]+(?:\.jpg|\.jpeg|\.png|\.gif|\.webp|user-images|assets\.github\.com)[^\s\)]*)/gi;
                     const images = comment.body.match(regex);
                     
                     if (images) {
                         images.forEach(imgUrl => {
                             count++;
                             const img = document.createElement('img');
-                            img.src = imgUrl;
+                            // ניקוי תווים מיותרים מהלינק
+                            img.src = imgUrl.replace(/[()]/g, ''); 
                             img.className = 'w-full h-48 object-cover rounded-lg shadow-md border border-gray-100';
                             gallery.appendChild(img);
                         });
                     }
                 });
 
-                if (count === 0) gallery.innerHTML = '<p class="text-center col-span-full text-gray-500">לא נמצאו תמונות בתגובות.</p>';
+                if (count === 0) gallery.innerHTML = '<p class="text-center col-span-full text-gray-500 italic py-10">לא נמצאו תמונות בתגובות של חשבון זה.</p>';
                 
             } catch (e) {
-                gallery.innerHTML = 'שגיאה בטעינת התגובות.';
+                gallery.innerHTML = 'שגיאה בטעינת התמונות.';
             }
         }
 
