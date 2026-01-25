@@ -5,61 +5,83 @@
     <title>רשת המעשים הטובים</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        .user-icon { position: absolute; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .user-icon:hover { transform: scale(1.1) rotate(3deg); z-index: 10; }
-        #modal { display: none; backdrop-filter: blur(12px); }
-        .gallery-img { width: 100%; height: 250px; object-fit: cover; border-radius: 1rem; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .user-icon { position: absolute; cursor: pointer; transition: all 0.4s ease; }
+        .user-icon:hover { transform: scale(1.1); z-index: 10; }
+        #modal { display: none; backdrop-filter: blur(10px); }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans">
+<body class="bg-slate-100 min-h-screen font-sans overflow-hidden">
 
-    <div class="pt-12 pb-6 text-center">
-        <h1 class="text-4xl font-black text-slate-900 tracking-tight">הפעולות המיטיבות שלנו</h1>
-        <p class="text-slate-500 mt-2 text-lg">לחצו על עיגול לצפייה בגלריה</p>
+    <div class="pt-10 text-center">
+        <h1 class="text-3xl font-bold text-slate-800">הפעולות המיטיבות שלנו</h1>
+        <div id="status-msg" class="text-blue-500 mt-2 text-sm italic font-medium">טוען נתונים מגיטהאב...</div>
     </div>
     
-    <div id="container" class="relative w-full h-[70vh]"></div>
+    <div id="container" class="relative w-full h-[80vh]"></div>
 
-    <div id="modal" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4" onclick="closeModalOutside(event)">
-        <div class="bg-white rounded-[2rem] shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col" onclick="event.stopPropagation()">
-            <div class="p-6 border-b flex justify-between items-center bg-white sticky top-0">
-                <h2 id="modalTitle" class="text-2xl font-bold text-slate-800"></h2>
-                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-600 text-2xl p-2">✕</button>
+    <div id="modal" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4" onclick="this.style.display='none'">
+        <div class="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl" onclick="event.stopPropagation()">
+            <div class="p-5 border-b flex justify-between items-center">
+                <h2 id="modalTitle" class="text-xl font-bold"></h2>
+                <button onclick="document.getElementById('modal').style.display='none'" class="text-gray-400 text-2xl">✕</button>
             </div>
-            <div id="gallery" class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-y-auto bg-slate-50">
+            <div id="gallery" class="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4 overflow-y-auto min-h-[200px]">
                 </div>
         </div>
     </div>
 
     <script>
-        // --- עדכן כאן את הפרטים שלך ---
-        const REPO_OWNER = 'shantupai'; 
-        const REPO_NAME = 'personalaccounts
+        // --- חובה לעדכן כאן ---
+        const USER = 'shantupai'; 
+        const REPO = 'personalaccounts
 ';
+        // ----------------------
 
-        async function init() {
-            const container = document.getElementById('container');
+        const container = document.getElementById('container');
+        const statusMsg = document.getElementById('status-msg');
+
+        async function loadApp() {
             try {
-                const res = await fetch(`https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/issues?state=all`);
+                const url = `https://api.github.com/repos/${USER}/${REPO}/issues?state=all`;
+                const res = await fetch(url);
+                
+                if (!res.ok) {
+                    throw new Error(`שגיאה מהשרת: ${res.status}. וודא ששם המשתמש והריפו נכונים.`);
+                }
+
                 const issues = await res.json();
+                
+                if (issues.length === 0) {
+                    statusMsg.innerText = "לא נמצאו Issues (חשבונות) בריפו.";
+                    return;
+                }
+
+                statusMsg.innerText = `נמצאו ${issues.length} חשבונות. לחצו על עיגול!`;
 
                 issues.forEach(issue => {
-                    const el = document.createElement('div');
-                    el.className = 'user-icon w-20 h-20 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-lg shadow-indigo-200';
-                    el.innerText = issue.title.charAt(0);
-                    el.style.left = Math.random() * 80 + 10 + '%';
-                    el.style.top = Math.random() * 70 + 10 + '%';
-                    el.onclick = () => openGallery(issue);
-                    container.appendChild(el);
+                    const bubble = document.createElement('div');
+                    bubble.className = 'user-icon w-20 h-20 bg-indigo-600 text-white rounded-full flex items-center justify-center text-xl font-bold shadow-lg border-4 border-white';
+                    bubble.innerText = issue.title.substring(0, 2);
+                    
+                    // מיקום רנדומלי
+                    bubble.style.left = Math.floor(Math.random() * 75 + 5) + '%';
+                    bubble.style.top = Math.floor(Math.random() * 65 + 5) + '%';
+                    
+                    bubble.onclick = () => showGallery(issue);
+                    container.appendChild(bubble);
                 });
-            } catch (e) { console.error(e); }
+
+            } catch (err) {
+                statusMsg.innerHTML = `<span class="text-red-500 font-bold">שגיאה: ${err.message}</span>`;
+                console.error(err);
+            }
         }
 
-        async function openGallery(issue) {
+        async function showGallery(issue) {
             const modal = document.getElementById('modal');
             const gallery = document.getElementById('gallery');
             document.getElementById('modalTitle').innerText = `הפעולות של ${issue.title}`;
-            gallery.innerHTML = '<p class="col-span-full text-center py-20 text-slate-400 animate-pulse">מחפש תמונות בתוך התגובות...</p>';
+            gallery.innerHTML = '<p class="text-center col-span-full">מחפש תמונות...</p>';
             modal.style.display = 'flex';
 
             try {
@@ -67,39 +89,31 @@
                 const comments = await res.json();
                 gallery.innerHTML = '';
                 
-                let foundImages = false;
-
+                let count = 0;
                 comments.forEach(comment => {
-                    // חיפוש לינקים לתמונות בצורה רחבה יותר
-                    // מחפש כתובות שמתחילות ב-http ומכילות מילים שקשורות להעלאות של גיטהאב או סיומות נפוצות
-                    const urlRegex = /(https?:\/\/[^\s\)]+(?:githubusercontent\.com|assets\.github\.com|user-images\.githubusercontent\.com)[^\s\)]+|(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|gif|webp|heic)))/gi;
-                    const matches = comment.body.match(urlRegex);
-
-                    if (matches) {
-                        matches.forEach(url => {
-                            // ניקוי סוגריים אם נשארו מה-Markdown
-                            const cleanUrl = url.replace(/[()]/g, '');
-                            foundImages = true;
+                    // חיפוש לינקים לתמונות בתוך הטקסט
+                    const regex = /(https?:\/\/[^\s\)]+\.(?:jpg|jpeg|png|gif|webp))/gi;
+                    const images = comment.body.match(regex);
+                    
+                    if (images) {
+                        images.forEach(imgUrl => {
+                            count++;
                             const img = document.createElement('img');
-                            img.src = cleanUrl;
-                            img.className = 'gallery-img shadow-md border-4 border-white hover:shadow-xl transition-shadow';
+                            img.src = imgUrl;
+                            img.className = 'w-full h-48 object-cover rounded-lg shadow-md border border-gray-100';
                             gallery.appendChild(img);
                         });
                     }
                 });
 
-                if (!foundImages) {
-                    gallery.innerHTML = '<div class="col-span-full text-center py-20"><p class="text-slate-500 text-lg italic">לא מצאתי תמונות בתגובות של האישיו הזה.</p><p class="text-sm text-slate-400 mt-2">וודא שהעלית תמונה (Upload) ולא רק כתבת טקסט.</p></div>';
-                }
+                if (count === 0) gallery.innerHTML = '<p class="text-center col-span-full text-gray-500">לא נמצאו תמונות בתגובות.</p>';
+                
             } catch (e) {
-                gallery.innerHTML = 'שגיאה בחיבור לגיטהאב.';
+                gallery.innerHTML = 'שגיאה בטעינת התגובות.';
             }
         }
 
-        function closeModal() { document.getElementById('modal').style.display = 'none'; }
-        function closeModalOutside(e) { if(e.target.id === 'modal') closeModal(); }
-
-        init();
+        loadApp();
     </script>
 </body>
 </html>
