@@ -2,101 +2,110 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>רשת המעשים הטובים</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Joulie - Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
     <style>
-        .user-icon { position: absolute; cursor: pointer; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .user-icon:hover { transform: scale(1.1) rotate(3deg); z-index: 10; }
-        #modal { display: none; backdrop-filter: blur(12px); }
-        .img-card { width: 100%; height: auto; max-height: 450px; object-fit: contain; border-radius: 1.5rem; background: white; border: 8px solid white; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+        :root { --primary: #2ecc71; --dark: #2c3e50; }
+        body { font-family: 'Segoe UI', system-ui; background: #f4f7f6; margin: 0; padding: 20px; color: var(--dark); }
+        .container { max-width: 1000px; margin: auto; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .account-card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); text-align: center; transition: 0.3s; cursor: pointer; border: 2px solid transparent; }
+        .account-card:hover { transform: translateY(-10px); border-color: var(--primary); }
+        .icon-circle { width: 80px; height: 80px; background: #e8f8f0; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; font-size: 40px; }
+        .total-joules { font-size: 24px; font-weight: bold; color: var(--primary); margin: 10px 0; }
+        .btn { background: var(--primary); color: white; border: none; padding: 12px 25px; border-radius: 30px; cursor: pointer; font-weight: bold; }
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; overflow-y: auto; }
+        .modal-content { background: white; max-width: 600px; margin: 50px auto; padding: 30px; border-radius: 20px; }
+        .image-gallery img { width: 100%; border-radius: 10px; margin-bottom: 15px; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen font-sans">
+<body>
 
-    <div class="pt-12 text-center">
-        <h1 class="text-4xl font-black text-indigo-900 drop-shadow-sm tracking-tight">רשת המעשים הטובים</h1>
-        <p id="status-msg" class="text-indigo-500 mt-2 text-lg italic font-medium">טוען את הנתונים מהשטח...</p>
+<div class="container">
+    <div class="header">
+        <h1>החשבונות שלי ⚡</h1>
+        <button class="btn" onclick="alert('כדי להעלות: היכנס ל-Issue בגיטהאב והוסף תגובה עם תמונה ומילת מפתח (#laundry)')">העלאת פעולה חדשה</button>
     </div>
-    
-    <div id="container" class="relative w-full h-[75vh]"></div>
+    <div id="grid" class="grid">טוען נתונים...</div>
+</div>
 
-    <div id="modal" class="fixed inset-0 bg-indigo-950/40 flex items-center justify-center z-50 p-4" onclick="this.style.display='none'">
-        <div class="bg-white rounded-[2.5rem] shadow-2xl max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden" onclick="event.stopPropagation()">
-            <div class="p-6 border-b flex justify-between items-center bg-white sticky top-0">
-                <h2 id="modalTitle" class="text-2xl font-black text-indigo-800"></h2>
-                <button onclick="document.getElementById('modal').style.display='none'" class="bg-slate-100 text-slate-400 hover:text-red-500 w-10 h-10 rounded-full font-bold transition-colors">✕</button>
-            </div>
-            <div id="gallery" class="p-8 grid grid-cols-1 gap-8 overflow-y-auto bg-slate-50">
-                </div>
-        </div>
+<div id="modal">
+    <div class="modal-content">
+        <button onclick="document.getElementById('modal').style.display='none'">✖ סגור</button>
+        <div id="modal-body"></div>
     </div>
+</div>
 
-    <script>
-        const USER = 'shantupai'; 
-        const REPO = 'personalaccounts';
+<script>
+    const REPO = "shantupai/personalaccounts";
+    const ENERGY_MAP = { '#laundry': 10, '#bike': 15, '#led': 50, '#shower': 5 };
+    const ICON_MAP = { 'בית': '🏠', 'תחבורה': '🚲', 'כביסה': '🧺', 'כללי': '📊' };
 
-        // פונקציה שמחלצת לינקים של תמונות מטקסט (Markdown)
-        function findImagesInText(text) {
-            if (!text) return [];
-            const regex = /(https?:\/\/[^\s\)]+(?:user-attachments|assets|user-images)[^\s\)]+)/gi;
-            const matches = text.match(regex);
-            return matches ? matches.map(url => url.replace(/[()\[\]]/g, '').split('?')[0]) : [];
-        }
+    async function fetchData() {
+        try {
+            const res = await axios.get(`https://api.github.com/repos/${REPO}/issues`);
+            const issues = res.data;
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
 
-        async function loadApp() {
-            try {
-                const res = await fetch(`https://api.github.com/repos/${USER}/${REPO}/issues?state=all&t=${Date.now()}`);
-                const issues = await res.json();
+            for (let issue of issues) {
+                const comments = await axios.get(issue.comments_url);
+                const allContent = issue.body + " " + comments.data.map(c => c.body).join(" ");
                 
-                if (issues.length > 0) document.getElementById('status-msg').innerText = "לחצו על חשבון לצפייה בגלריה";
-
-                issues.forEach(issue => {
-                    const bubble = document.createElement('div');
-                    bubble.className = 'user-icon w-24 h-24 bg-gradient-to-tr from-indigo-600 to-purple-500 text-white rounded-full flex items-center justify-center text-2xl font-black shadow-2xl border-4 border-white';
-                    bubble.innerText = issue.title.charAt(0).toUpperCase();
-                    bubble.style.left = Math.random() * 70 + 10 + '%';
-                    bubble.style.top = Math.random() * 60 + 10 + '%';
-                    bubble.onclick = () => showGallery(issue);
-                    document.getElementById('container').appendChild(bubble);
-                });
-            } catch (e) { document.getElementById('status-msg').innerText = "שגיאה בחיבור לגיטהאב"; }
-        }
-
-        async function showGallery(issue) {
-            const modal = document.getElementById('modal');
-            const gallery = document.getElementById('gallery');
-            document.getElementById('modalTitle').innerText = `הפעולות של ${issue.title}`;
-            gallery.innerHTML = '<p class="text-center py-10 text-indigo-400 animate-pulse font-medium text-lg">אוסף את רגעי הטוב...</p>';
-            modal.style.display = 'flex';
-
-            try {
-                // 1. קח תמונות מהתיאור הראשי של האישיו (Body)
-                let allImageUrls = findImagesInText(issue.body);
-
-                // 2. קח תמונות מהתגובות
-                const res = await fetch(issue.comments_url);
-                const comments = await res.json();
-                comments.forEach(c => {
-                    const imgsInComment = findImagesInText(c.body);
-                    allImageUrls = allImageUrls.concat(imgsInComment);
+                // חישוב ג'אולים לפי מילות מפתח
+                let total = 0;
+                Object.keys(ENERGY_MAP).forEach(key => {
+                    const count = (allContent.match(new RegExp(key, 'g')) || []).length;
+                    total += count * ENERGY_MAP[key];
                 });
 
-                // הצגת התמונות
-                gallery.innerHTML = '';
-                if (allImageUrls.length === 0) {
-                    gallery.innerHTML = '<div class="text-center py-20 text-slate-400 italic">לא נמצאו תמונות בחשבון זה.</div>';
-                } else {
-                    allImageUrls.forEach(url => {
-                        const img = document.createElement('img');
-                        img.src = url;
-                        img.className = 'img-card';
-                        img.onerror = () => img.style.display = 'none';
-                        gallery.appendChild(img);
-                    });
-                }
-            } catch (e) { gallery.innerHTML = 'שגיאה בטעינת הגלריה.'; }
+                // חילוץ תמונות
+                const imgRegex = /!\[.*?\]\((.*?)\)/g;
+                let images = [];
+                let match;
+                while ((match = imgRegex.exec(allContent)) !== null) images.push(match[1]);
+
+                // יצירת כרטיס
+                const icon = Object.keys(ICON_MAP).find(k => issue.title.includes(k)) || '🌱';
+                const card = document.createElement('div');
+                card.className = 'account-card';
+                card.innerHTML = `
+                    <div class="icon-circle">${icon}</div>
+                    <h3>${issue.title}</h3>
+                    <div class="total-joules">${total} Joulies</div>
+                    <small>${images.length} תמונות תועדו</small>
+                `;
+                card.onclick = () => showAccount(issue.title, images, total);
+                grid.appendChild(card);
+            }
+        } catch (e) { console.error(e); }
+    }
+
+    function showAccount(title, images, total) {
+        const modal = document.getElementById('modal');
+        const body = document.getElementById('modal-body');
+        modal.style.display = 'block';
+        body.innerHTML = `
+            <h2>${title}</h2>
+            <p>סך חיסכון מצטבר: <b>${total}</b> יחידות ג'אולי</p>
+            <hr>
+            <div class="image-gallery">
+                ${images.map(img => `<img src="${img}">`).join('')}
+            </div>
+            <button class="btn" style="background:orange" onclick="transfer('${title}')">העברת ג'אולים</button>
+        `;
+    }
+
+    function transfer(from) {
+        const password = prompt("הכנס סיסמת חשבון לאימות:");
+        if(password) {
+            alert(`מעביר ג'אולים מחשבון ${from}... (בגרסה הבאה יתחבר ל-API לכתיבה)`);
         }
-        loadApp();
-    </script>
+    }
+
+    fetchData();
+</script>
 </body>
 </html>
